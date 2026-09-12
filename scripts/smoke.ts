@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   type OutputItem = ModelResponse["output"][number];
 
   const { KnowledgeBase, loadHousehold } = await import("../src/lib/kb");
-  const { MessageLog, ConsoleSms } = await import("../src/lib/sms");
+  const { MessageLog, ConsoleSms, toGsmSafe } = await import("../src/lib/sms");
   const { FileSession } = await import("../src/lib/session");
   const { householdTextGuardrail, runTurn } = await import("../src/lib/agent");
 
@@ -80,6 +80,10 @@ async function main(): Promise<void> {
     await assert.rejects(kb.write("shared/snap-basics.md", "x"), /read-only/);
     await assert.rejects(kb.read("../../etc/passwd"), /Invalid document name/);
     await assert.rejects(kb.read("nope.md"), /No document named/);
+  });
+
+  await check("curly quotes and dashes become GSM-safe ASCII before sending", () => {
+    assert.equal(toGsmSafe("It\u2019s time \u2014 \u201Csame\u201D or new\u2026"), "It's time - \"same\" or new...");
   });
 
   console.log("message log and session");
