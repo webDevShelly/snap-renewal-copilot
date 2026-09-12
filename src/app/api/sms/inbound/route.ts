@@ -7,8 +7,10 @@ export const dynamic = "force-dynamic";
 /**
  * Vonage inbound-SMS webhook. Set your Vonage number's inbound URL to this route.
  * The SMS API delivers `msisdn` (sender) and `text` by GET or POST; the Messages API posts JSON
- * with `from.number` and `text`. Both are accepted. Always answer 200 so Vonage does not retry.
- * The agent replies through its own send_text_message tool.
+ * with `from.number` and `text`. Both are accepted. The route answers 200 right away, because
+ * Vonage retries slow webhooks, and runs the agent turn in the background; the agent replies
+ * through its own send_text_message tool. Requires a long-lived Node server (next start), not a
+ * serverless runtime that freezes after the response.
  * Demo only: add Vonage signature verification before exposing this route publicly.
  */
 async function parseInbound(request: Request): Promise<{ from: string; text: string }> {
@@ -33,12 +35,10 @@ async function handle(request: Request): Promise<Response> {
   const userId = await findUserByPhone(from);
   if (!userId) return new Response("unknown sender", { status: 200 });
 
-  try {
-    await runTurn(userId, { kind: "inbound_text", body: text }, { quiet: true });
-  } catch (error) {
-    console.error("inbound sms failed", error);
-  }
-  return new Response("ok", { status: 200 });
+  void runTurn(userId, { kind: "inbound_text", body: text }, { quiet: true }).catch((error) => {
+    console.error(`inbound sms turn failed for ${userId}:`, error);
+  });
+  return new Response("accepted", { status: 200 });
 }
 
 export const GET = handle;

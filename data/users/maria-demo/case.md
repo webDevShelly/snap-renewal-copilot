@@ -5,7 +5,7 @@
 - Certification period: 2025-11-16 to 2026-11-15
 - Recertification packet: received 2026-09-10 (recertification form plus interview appointment letter)
 - Recertification interview: 2026-10-06 at 10:30 AM by phone. HRA calls Maria's number. The recertification form must be submitted before the interview can be completed.
-- Recertification form: NOT yet submitted
+- Form and document status: see documents.md (the single source of truth for what is still outstanding)
 - Recertification due: 2026-10-31 (everything must be in for benefits to continue past 2026-11-15)
 - Last periodic report: filed 2026-05-04, on time
 - Change to report: Maria's work hours went up in August 2026, so her income must be reported at recertification
