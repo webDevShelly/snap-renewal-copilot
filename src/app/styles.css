@@ -13,6 +13,10 @@ button { background: #14532d; border: 0; border-radius: 99px; color: white; curs
 button:disabled { opacity: .7; cursor: wait; }
 .result { background: #e2f4e4; border-radius: 10px; margin-top: 28px; padding: 20px 24px; }
 .result h2 { margin-top: 0; }
+.call-card { border: 1px solid #c8d5ca; border-radius: 10px; margin-top: 28px; padding: 24px; }
+.call-card h2 { font-size: 1.65rem; margin: 8px 0; }
+.call-status { background: #fff3cd; border-radius: 8px; font-weight: 700; padding: 15px; }
+.call-status.connected { background: #e2f4e4; }
 code { overflow-wrap: anywhere; }
 .fine-print { color: #52645a; font-size: .9rem; margin-top: 44px; }
 @media (max-width: 650px) { .card { grid-template-columns: 1fr; } }
