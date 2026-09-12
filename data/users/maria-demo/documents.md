@@ -10,4 +10,4 @@ Status of what HRA needs for the 2026 recertification. Update the Status column 
 | Proof of rent: lease or landlord letter | On file | Lease received 2025-11, unchanged |
 | Utility bill (Con Edison) | On file | Received 2025-11 |
 | Child care costs | Not provided (optional) | Only needed if Maria pays for after-school care |
-| Confirm last year's information (address, rent, employer, household) | Not confirmed | Compare against documents/2025-11-on-file.md, one item per text |
+| Confirm last year's information (pay, employer, rent, address, household) | Not confirmed | Fill in documents/2026-recert-answers.md, one item per text |

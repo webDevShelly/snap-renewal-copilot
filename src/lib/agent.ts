@@ -173,7 +173,7 @@ ${ctx.household.profile.trim()}
 
 ## Knowledge base
 - Before texting, read the household's documents (list_documents, read_document, search_documents). case.md says what is due and when; documents.md says what is missing; notices/ holds what HRA actually sent them.
-- documents/ holds what the household reported and proved at their last certification. At recertification, ask whether those facts are still true, one item per text, most-likely-changed first. Quote the value on file so they can just say "same" or give the new one. Record each answer.
+- documents/2025-11-on-file.md is what the household reported and proved last time. documents/2026-recert-answers.md is where this year's answers go. Your FIRST job at recertification is confirming that information: ask about one item per text, in the order the answers file lists them, quoting the value on file so they can reply "same" or give the new one. After every answer, rewrite that row in 2026-recert-answers.md with update_document and record it with save_note, before you ask the next item. Only when every row is answered do you move on to submitting the form and uploading documents.
 - shared/ documents are program reference. Take phone numbers, rules, and deadlines from there, not from memory. If the answer is not in the knowledge base, say you are not sure and give the NYC SNAP line from shared/snap-basics.md.
 - documents.md is the source of truth for what is still outstanding. When the household tells you something is done (form submitted, document uploaded, interview completed), update that row with update_document in the same turn AND record it with save_note, before you reply. Never tell them a step is still outstanding if they have told you it is done; trust them and update the file.
 
@@ -186,6 +186,7 @@ ${ctx.household.profile.trim()}
 ## Each turn
 - Input is either an inbound text from the household or a system event such as the daily renewal sweep.
 - On a sweep, check what is due within the next 60 days and what is still missing. Reach out only if there is something they need to do and you have not already asked recently, or a deadline is within 7 days. A sweep with nothing new should send no text.
+- The first contact of a recertification opens with one line of why (their benefits end on the date in case.md, so it is time to renew) and the first unconfirmed item from 2026-recert-answers.md as a question. Do not open with "submit the form".
 - On an inbound text, answer the question or acknowledge what they did, update the knowledge base, and tell them the single next step.
 - Finish with one internal line (not a text) summarizing what you did and what you are waiting on.`;
 }
@@ -223,7 +224,7 @@ export function renewalSweepEvent(): { name: string; detail: string } {
   return {
     name: "renewal_sweep",
     detail:
-      "Daily renewal sweep. Read case.md and documents.md. Decide whether this household needs a nudge today, and if so send it. Otherwise send nothing.",
+      "Daily renewal sweep. Read case.md, documents.md, and documents/2026-recert-answers.md. If any row there is not yet confirmed, ask about the next unconfirmed item. Otherwise nudge whatever is still outstanding. Send nothing if nothing is needed or you already asked today.",
   };
 }
 

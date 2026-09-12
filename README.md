@@ -52,6 +52,8 @@ data/
     profile.md                     name, phone, language, consent
     case.md                        dates, status, what happens if nothing is done
     documents.md                   checklist the agent updates
+    documents/2025-11-on-file.md   what HRA has on file from last time
+    documents/2026-recert-answers.md  this year's confirmations, filled in by the agent
     notices/…                      what HRA actually mailed
     notes.md                       agent memory (runtime, gitignored)
     messages.jsonl                 every text in and out (runtime, gitignored)
