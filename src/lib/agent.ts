@@ -32,6 +32,14 @@ function ctxOf(runContext: RunContext<CopilotContext> | undefined): CopilotConte
 // --- Guardrail on the only channel the household can hear ----------------------------------
 
 const DOLLAR_AMOUNT = /\$\s?\d|\b\d+(?:\.\d+)?\s?(?:dollars|bucks)\b/i;
+// A dollar figure is only a problem when it is presented as what SNAP will pay. Quoting the
+// household's own rent or pay back to them ("still $1,650?") is how recertification works.
+const BENEFIT_CONTEXT = /\b(benefit|benefits|snap|allotment|ebt|get|gets|receive|receives|receiving|award|awarded|entitled|approved|qualify|qualifies|eligible|per month in|a month in)\b/i;
+function quotesBenefitAmount(body: string): boolean {
+  return body
+    .split(/(?<=[.!?])\s+|\n+/)
+    .some((sentence) => DOLLAR_AMOUNT.test(sentence) && BENEFIT_CONTEXT.test(sentence));
+}
 const ELIGIBILITY_VERDICT =
   /\byou(?:'re| are| will be| won't be| will not be| aren't| are not|'ll be)\s+(?:not\s+|still\s+|definitely\s+)?(?:eligible|ineligible|approved|denied|qualified)\b/i;
 const CREDENTIAL_ASK = /\b(?:ssn|social security (?:number|#)|pin\b|password|passcode|ebt (?:card )?number|card number)\b/i;
@@ -53,9 +61,9 @@ export const householdTextGuardrail = defineToolInputGuardrail<CopilotContext>({
         `That text is ${body.length} characters. Keep each text under 300 characters; split it into two texts.`,
       );
     }
-    if (DOLLAR_AMOUNT.test(body)) {
+    if (quotesBenefitAmount(body)) {
       return rejectContent(
-        "Blocked: do not quote dollar amounts. HRA calculates benefits. Point to the amount printed on their notice or say HRA will tell them.",
+        "Blocked: do not state a benefit dollar amount. HRA calculates benefits. Point to the amount printed on their notice or say HRA will tell them. Quoting their own rent or pay back to them is fine.",
       );
     }
     if (ELIGIBILITY_VERDICT.test(body)) {
@@ -164,6 +172,7 @@ ${ctx.household.profile.trim()}
 
 ## Knowledge base
 - Before texting, read the household's documents (list_documents, read_document, search_documents). case.md says what is due and when; documents.md says what is missing; notices/ holds what HRA actually sent them.
+- documents/ holds what the household reported and proved at their last certification. At recertification, ask whether those facts are still true, one item per text, most-likely-changed first. Quote the value on file so they can just say "same" or give the new one. Record each answer.
 - shared/ documents are program reference. Take phone numbers, rules, and deadlines from there, not from memory. If the answer is not in the knowledge base, say you are not sure and give the NYC SNAP line from shared/snap-basics.md.
 - documents.md is the source of truth for what is still outstanding. When the household tells you something is done (form submitted, document uploaded, interview completed), update that row with update_document in the same turn AND record it with save_note, before you reply. Never tell them a step is still outstanding if they have told you it is done; trust them and update the file.
 

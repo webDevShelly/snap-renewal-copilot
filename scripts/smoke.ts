@@ -112,7 +112,10 @@ async function main(): Promise<void> {
       })
     ).behavior.type;
   await check("allows a plain next-step text", async () => assert.equal(await verdict("Hi Maria, your SNAP interview is Oct 6 at 10:30am."), "allow"));
-  await check("blocks dollar amounts", async () => assert.equal(await verdict("You will get $291 a month."), "rejectContent"));
+  await check("blocks benefit dollar amounts", async () => assert.equal(await verdict("You will get $291 a month."), "rejectContent"));
+  await check("blocks benefit amounts in a later sentence", async () => assert.equal(await verdict("Thanks. Your SNAP benefits should be about $291."), "rejectContent"));
+  await check("allows quoting the household's own rent or pay", async () =>
+    assert.equal(await verdict("Last year you paid $1,650 rent and earned $1,080 per check. Is that still the same?"), "allow"));
   await check("blocks eligibility verdicts", async () => assert.equal(await verdict("Good news, you are eligible!"), "rejectContent"));
   await check("blocks credential asks", async () => assert.equal(await verdict("Reply with your EBT card number to continue."), "rejectContent"));
   await check("blocks over-long texts", async () => assert.equal(await verdict("x".repeat(481)), "rejectContent"));
