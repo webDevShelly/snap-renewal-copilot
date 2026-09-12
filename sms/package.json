@@ -1,0 +1,18 @@
+{
+  "name": "benefit-bridge-sms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A small Twilio SMS inbox and sender.",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "openai": "^6.22.0",
+    "twilio": "^5.8.0"
+  }
+}
