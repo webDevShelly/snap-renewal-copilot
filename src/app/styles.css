@@ -34,5 +34,10 @@ button.secondary { width: 100%; margin-top: 10px; background: transparent; borde
 .kb summary { cursor: pointer; padding: 12px 16px; font-weight: 700; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
 .kb summary code { font-weight: 400; font-size: .8rem; color: #52715d; overflow-wrap: anywhere; }
 .kb pre { margin: 0; padding: 0 16px 16px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; line-height: 1.45; color: #1f3a2d; }
+.call-card { background: #fffef8; border: 1px solid #c8d5ca; border-radius: 12px; margin-top: 28px; padding: 24px; max-width: 760px; }
+.call-card h2 { font-size: 1.65rem; margin: 8px 0; }
+.call-card p { line-height: 1.5; }
+.call-status { background: #fff3cd; border-radius: 8px; font-weight: 700; padding: 15px; }
+.call-status.connected { background: #e2f4e4; }
 .fine-print { color: #52645a; font-size: .9rem; margin-top: 44px; max-width: 760px; }
 @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } }

@@ -19,6 +19,7 @@ export default function Home() {
   const [busy, setBusy] = useState<null | "send" | "sweep">(null);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [callStatus, setCallStatus] = useState<"idle" | "holding" | "connected">("idle");
 
   const refresh = useCallback(async () => {
     const response = await fetch("/api/thread");
@@ -57,6 +58,11 @@ export default function Home() {
     if (!message || busy) return;
     setDraft("");
     act({ message }, "send");
+  }
+
+  function startMockCall() {
+    setCallStatus("holding");
+    window.setTimeout(() => setCallStatus("connected"), 3500);
   }
 
   const first = thread?.household.firstName ?? "the household";
@@ -124,6 +130,22 @@ export default function Home() {
           ))}
         </aside>
       </div>
+
+      <section className="call-card">
+        <p className="eyebrow">Mock support-line experience</p>
+        <h2>Don&rsquo;t lose hours waiting for renewal help.</h2>
+        <p>
+          The demo agent calls the user-authorized mock SNAP support number <b>404-360-5104</b>, stays on hold, and gathers {first}&rsquo;s
+          renewal context before a representative connects.
+        </p>
+        {callStatus === "idle" && <button onClick={startMockCall}>Simulate SNAP support call</button>}
+        {callStatus === "holding" && (
+          <p className="call-status">On hold · Agent is collecting {first}&rsquo;s renewal status and missing-document details…</p>
+        )}
+        {callStatus === "connected" && (
+          <p className="call-status connected">Representative connected · Agent is ready with a concise renewal summary.</p>
+        )}
+      </section>
 
       <p className="fine-print">
         Demo data only. The copilot never submits a recertification, never states eligibility, never quotes a benefit amount, and never
