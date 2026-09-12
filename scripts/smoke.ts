@@ -146,6 +146,18 @@ async function main(): Promise<void> {
   await check("blocks eligibility verdicts", async () => assert.equal(await verdict("Good news, you are eligible!"), "rejectContent"));
   await check("blocks credential asks", async () => assert.equal(await verdict("Reply with your EBT card number to continue."), "rejectContent"));
   await check("blocks over-long texts", async () => assert.equal(await verdict("x".repeat(481)), "rejectContent"));
+  await check("screens connect_to_snap reasons the same way", async () => {
+    const run = async (reason: string) =>
+      (
+        await householdTextGuardrail.run({
+          context: {} as never,
+          agent: {} as never,
+          toolCall: { type: "function_call", callId: "c9", name: "connect_to_snap", arguments: JSON.stringify({ reason }) },
+        })
+      ).behavior.type;
+    assert.equal(await run("Calling on behalf of Maria Alvarez about her October 6 interview."), "allow");
+    assert.equal(await run("Her SNAP benefit should be $291, please confirm."), "rejectContent");
+  });
 
   console.log("agent loop with a scripted model");
   const call = (name: string, args: Record<string, unknown>, id: string): OutputItem => ({
@@ -188,8 +200,10 @@ async function main(): Promise<void> {
     [call("send_text_message", { body: "Hi Maria, it's your SNAP copilot. Your recert interview is Oct 6 at 10:30am. Step 1: submit the recert form in ACCESS HRA before then. Want help?" }, "c3")],
     [call("save_note", { note: "Sent first recert nudge." }, "c4")],
     [call("place_call", { body: "Hi Maria, this is your SNAP renewal helper. Please submit your form before October sixth." }, "c5")],
+    [call("connect_to_snap", { reason: "Calling on behalf of Maria Alvarez about rescheduling her October 6 interview." }, "c6")],
     [say("Sent Maria the first nudge; waiting on her reply.")],
   ]);
+  process.env.SNAP_OFFICE_NUMBER = "+13125550123";
 
   const first = await runTurn(
     userId,
@@ -206,19 +220,20 @@ async function main(): Promise<void> {
   await check("guardrail rejection is what the model sees for the dollar text", () => {
     assert.match(resultText(model.requests[2], "c2"), /Blocked: do not state a benefit dollar amount/);
   });
-  await check("only the clean text was sent, and the call was logged as a call", async () => {
-    assert.equal(first.sent.length, 2);
+  await check("only the clean text was sent, and both calls were logged as calls", async () => {
+    assert.equal(first.sent.length, 3);
     assert.match(first.sent[0].body, /Oct 6/);
     assert.match(first.sent[1].body, /^\[call\] Hi Maria/);
     assert.equal(first.sent[1].channel, "console-voice");
+    assert.match(first.sent[2].body, /^\[call to SNAP\] Calling on behalf/);
     const logged = await new MessageLog(userId).all();
-    assert.equal(logged.length, 2);
+    assert.equal(logged.length, 3);
     assert.ok(logged.every((m) => m.direction === "outbound"));
   });
   await check("note was written and summary returned", async () => {
     assert.match((await kb.read("notes.md")).content, /Sent first recert nudge/);
     assert.equal(first.summary, "Sent Maria the first nudge; waiting on her reply.");
-    assert.deepEqual(first.toolCalls, ["read_document", "send_text_message", "send_text_message", "save_note", "place_call"]);
+    assert.deepEqual(first.toolCalls, ["read_document", "send_text_message", "send_text_message", "save_note", "place_call", "connect_to_snap"]);
   });
 
   const model2 = new ScriptedModel([[say("Acknowledged; nothing to send.")]]);
@@ -235,8 +250,8 @@ async function main(): Promise<void> {
   });
   await check("inbound text was logged before the run", async () => {
     const logged = await new MessageLog(userId).all();
-    assert.equal(logged.length, 3);
-    assert.equal(logged[2].direction, "inbound");
+    assert.equal(logged.length, 4);
+    assert.equal(logged[3].direction, "inbound");
   });
 
   await fs.rm(tmp, { recursive: true, force: true });

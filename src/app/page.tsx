@@ -81,9 +81,9 @@ export default function Home() {
             {thread?.messages.map((message) => (
               <div
                 key={message.id}
-                className={`bubble ${message.direction === "outbound" ? "out" : "in"}${message.body.startsWith("[call] ") ? " call" : ""}`}
+                className={`bubble ${message.direction === "outbound" ? "out" : "in"}${message.body.startsWith("[call") ? " call" : ""}`}
               >
-                <p>{message.body.startsWith("[call] ") ? `📞 ${message.body.slice(7)}` : message.body}</p>
+                <p>{message.body.startsWith("[call") ? `📞 ${message.body.replace(/^\[call( to SNAP)?\] /, (_m, snap) => (snap ? "To SNAP: " : ""))}` : message.body}</p>
                 <time>{time(message.at)}</time>
               </div>
             ))}

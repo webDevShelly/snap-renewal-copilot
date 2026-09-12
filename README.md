@@ -98,6 +98,11 @@ household asks for a call or a deadline is within three days and texts have gone
 only between 8 AM and 9 PM New York time. The same guardrail that screens texts screens the
 spoken script. Calls appear in the thread as 📞 entries.
 
+`connect_to_snap` goes one step further, only when the household explicitly asks the copilot to
+call SNAP for them: it dials `SNAP_OFFICE_NUMBER`, the office hears a one-sentence reason, and the
+household's phone is rung into the same call so they speak for themselves. The copilot never
+submits or changes anything with the office.
+
 ## The SNAP office number
 
 The knowledge base never contains a real agency phone number. Every "call SNAP" instruction

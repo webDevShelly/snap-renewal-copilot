@@ -54,9 +54,10 @@ export const householdTextGuardrail = defineToolInputGuardrail<CopilotContext>({
   run: async ({ toolCall }) => {
     let body = "";
     try {
-      body = String((JSON.parse(toolCall.arguments) as { body?: unknown }).body ?? "");
+      const args = JSON.parse(toolCall.arguments) as { body?: unknown; reason?: unknown };
+      body = String(args.body ?? args.reason ?? "");
     } catch {
-      return rejectContent("send_text_message arguments must be JSON with a string body.");
+      return rejectContent("Tool arguments must be JSON with a string body.");
     }
     if (!body.trim()) return rejectContent("Empty message. Say something useful or send nothing.");
     if (body.length > 480) {
@@ -132,6 +133,35 @@ const placeCall = tool({
   },
 });
 
+const connectToSnap = tool({
+  name: "connect_to_snap",
+  description:
+    "Call the SNAP office on the household's behalf: the office hears a one-sentence reason, then the household's phone rings and is connected into the same call so they can talk to the office themselves. Use ONLY when the household explicitly asks you to call SNAP for them, and only for a concrete reason such as rescheduling a missed interview, asking about a notice, or requesting a fair hearing. Never to submit or change anything. Text them first that you are calling and that their phone will ring.",
+  parameters: z.object({
+    reason: z.string().describe(
+      "The one sentence the office hears first, e.g. 'Calling on behalf of Maria Alvarez about rescheduling her October 6 recertification interview.' Name and purpose only: no case number, no Social Security number, no dollar amounts.",
+    ),
+  }),
+  inputGuardrails: [householdTextGuardrail],
+  execute: async ({ reason }, runContext?: RunContext<CopilotContext>) => {
+    const ctx = ctxOf(runContext);
+    const office = process.env.SNAP_OFFICE_NUMBER?.trim();
+    if (!office) throw new Error("No SNAP office number is configured, so the office cannot be called. Give the household the number instead.");
+    if (!withinCallWindow()) {
+      throw new Error("Calls are only placed between 8 AM and 9 PM New York time. Tell the household when you can call.");
+    }
+    const { callId } = await ctx.voice.bridge(office, reason, ctx.household.phone);
+    const message = await ctx.log.append({
+      direction: "outbound",
+      phone: ctx.household.phone,
+      body: `[call to SNAP] ${reason}`,
+      channel: `${ctx.voice.name}-voice`,
+    });
+    ctx.sentThisTurn.push(message);
+    return { calling: true, callId, at: message.at, householdWillRing: true };
+  },
+});
+
 const listDocuments = tool({
   name: "list_documents",
   description:
@@ -193,7 +223,7 @@ Household you are helping:
 ${ctx.household.profile.trim()}
 
 ## How you communicate
-- The household can ONLY hear you through the send_text_message tool and, rarely, the place_call tool. Anything you write outside those tools is an internal note for the operator log; the household never sees it.
+- The household can ONLY hear you through the send_text_message tool and, rarely, the place_call and connect_to_snap tools. Anything you write outside those tools is an internal note for the operator log; the household never sees it.
 - Text like a helpful caseworker friend: plain words, short sentences, no jargon, no acronyms without saying what they mean. One question or one ask per text. Under 300 characters each. Two short texts beat one long one.
 - Every text must move them toward a concrete next step: the thing to do, where to do it, and by when. Prefer a real date over "soon".
 - Reply in the language of the household's most recent text. If they ask for another language, use it until they switch back. Do not send a text that repeats something you already told them unless a deadline is close.
@@ -207,6 +237,7 @@ ${ctx.household.profile.trim()}
 ## Calling
 - Texting is the default. Place a call only when the household asks to be called, or when a deadline is within 3 days and they have not answered your texts.
 - A call is one spoken message under 60 words: who you are, the one thing to do, and by when. Say numbers as words a person would say aloud. Never read a URL. After the call, send one text with the same next step so they have it in writing.
+- connect_to_snap calls the SNAP office for them and joins their phone into the call. Use it only when they explicitly ask you to call SNAP on their behalf, for a concrete reason. First send a text saying you are calling SNAP now and their phone will ring to join, then place the call. Once connected, they speak for themselves; you never submit or change anything with the office.
 
 ## Hard limits
 - Never say whether they are or are not eligible, approved, or denied, and never quote a benefit dollar amount. HRA decides; you explain what to do and how they will hear.
@@ -229,7 +260,7 @@ export function createCopilotAgent(options: { model?: string | Model } = {}): Ag
   return new Agent<CopilotContext>({
     name: "SNAP Renewal Copilot",
     instructions: (runContext) => buildInstructions(runContext.context),
-    tools: [sendTextMessage, placeCall, listDocuments, readDocument, searchDocuments, saveNote, updateDocument],
+    tools: [sendTextMessage, placeCall, connectToSnap, listDocuments, readDocument, searchDocuments, saveNote, updateDocument],
     ...(model ? { model } : {}),
   });
 }

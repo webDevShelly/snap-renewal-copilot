@@ -5,6 +5,8 @@ export interface VoiceTransport {
   readonly name: string;
   /** Ring `to` and read `script` aloud with text-to-speech. */
   call(to: string, script: string): Promise<{ callId?: string }>;
+  /** Ring `office`, read `intro` aloud, then ring `household` into the same call so the two can talk. */
+  bridge(office: string, intro: string, household: string): Promise<{ callId?: string }>;
 }
 
 /** Prints the call instead of placing it. Default when Vonage voice is not configured. */
@@ -13,6 +15,10 @@ export class ConsoleVoice implements VoiceTransport {
   constructor(private readonly quiet = false) {}
   async call(to: string, script: string): Promise<{ callId?: string }> {
     if (!this.quiet) console.log(`\n📞  Copilot calls ${to}\n    "${script}"\n`);
+    return {};
+  }
+  async bridge(office: string, intro: string, household: string): Promise<{ callId?: string }> {
+    if (!this.quiet) console.log(`\n📞  Copilot calls SNAP at ${office}: "${intro}" then connects ${household}\n`);
     return {};
   }
 }
@@ -41,7 +47,7 @@ export class VonageVoice implements VoiceTransport {
     private readonly from: string,
   ) {}
 
-  async call(to: string, script: string): Promise<{ callId?: string }> {
+  private async createCall(to: string, ncco: Array<Record<string, unknown>>): Promise<{ callId?: string }> {
     const response = await fetch("https://api.nexmo.com/v1/calls", {
       method: "POST",
       headers: {
@@ -51,7 +57,7 @@ export class VonageVoice implements VoiceTransport {
       body: JSON.stringify({
         to: [{ type: "phone", number: to.replace(/^\+/, "") }],
         from: { type: "phone", number: this.from.replace(/^\+/, "") },
-        ncco: [{ action: "talk", text: script, language: "en-US", style: 0 }],
+        ncco,
       }),
     });
     const result = (await response.json().catch(() => ({}))) as VonageCallResponse;
@@ -59,6 +65,24 @@ export class VonageVoice implements VoiceTransport {
       throw new Error(`Vonage rejected the call (${response.status}): ${result.title ?? result.error_title ?? result.detail ?? "unknown error"}`);
     }
     return { callId: result.uuid };
+  }
+
+  async call(to: string, script: string): Promise<{ callId?: string }> {
+    return this.createCall(to, [{ action: "talk", text: script, language: "en-US", style: 0 }]);
+  }
+
+  /** The office leg hears the intro while the household's phone rings; Vonage joins them when answered. */
+  async bridge(office: string, intro: string, household: string): Promise<{ callId?: string }> {
+    return this.createCall(office, [
+      { action: "talk", text: intro, language: "en-US", style: 0 },
+      { action: "talk", text: "Please hold while I connect them now.", language: "en-US", style: 0 },
+      {
+        action: "connect",
+        from: this.from.replace(/^\+/, ""),
+        timeout: 45,
+        endpoint: [{ type: "phone", number: household.replace(/^\+/, "") }],
+      },
+    ]);
   }
 }
 
