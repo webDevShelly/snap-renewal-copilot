@@ -114,6 +114,7 @@ async function main(): Promise<void> {
   await check("allows a plain next-step text", async () => assert.equal(await verdict("Hi Maria, your SNAP interview is Oct 6 at 10:30am."), "allow"));
   await check("blocks benefit dollar amounts", async () => assert.equal(await verdict("You will get $291 a month."), "rejectContent"));
   await check("blocks benefit amounts in a later sentence", async () => assert.equal(await verdict("Thanks. Your SNAP benefits should be about $291."), "rejectContent"));
+  await check("blocks 'HRA will pay you' amounts", async () => assert.equal(await verdict("HRA will pay you $291 next month."), "rejectContent"));
   await check("allows quoting the household's own rent or pay", async () =>
     assert.equal(await verdict("Last year you paid $1,650 rent and earned $1,080 per check. Is that still the same?"), "allow"));
   await check("blocks eligibility verdicts", async () => assert.equal(await verdict("Good news, you are eligible!"), "rejectContent"));
@@ -172,7 +173,7 @@ async function main(): Promise<void> {
     assert.match(resultText(model.requests[1], "c1"), /2026-10-06/);
   });
   await check("guardrail rejection is what the model sees for the dollar text", () => {
-    assert.match(resultText(model.requests[2], "c2"), /Blocked: do not quote dollar amounts/);
+    assert.match(resultText(model.requests[2], "c2"), /Blocked: do not state a benefit dollar amount/);
   });
   await check("only the clean text was sent and logged", async () => {
     assert.equal(first.sent.length, 1);

@@ -34,7 +34,8 @@ function ctxOf(runContext: RunContext<CopilotContext> | undefined): CopilotConte
 const DOLLAR_AMOUNT = /\$\s?\d|\b\d+(?:\.\d+)?\s?(?:dollars|bucks)\b/i;
 // A dollar figure is only a problem when it is presented as what SNAP will pay. Quoting the
 // household's own rent or pay back to them ("still $1,650?") is how recertification works.
-const BENEFIT_CONTEXT = /\b(benefit|benefits|snap|allotment|ebt|get|gets|receive|receives|receiving|award|awarded|entitled|approved|qualify|qualifies|eligible|per month in|a month in)\b/i;
+const BENEFIT_CONTEXT =
+  /\b(benefit|benefits|snap|allotment|ebt|get|gets|receive|receives|receiving|award|awarded|entitled|approved|qualify|qualifies|eligible|per month in|a month in|will pay|pays? you|paid you|payment|deposit|deposited|issued)\b/i;
 function quotesBenefitAmount(body: string): boolean {
   return body
     .split(/(?<=[.!?])\s+|\n+/)
