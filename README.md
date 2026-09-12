@@ -82,8 +82,9 @@ src/app/
 
 Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` and outbound texts go
 over Twilio. Point the number's inbound messaging webhook at `POST /api/sms/inbound`; the
-household is matched by the phone in `profile.md`. Add Twilio signature validation before
-exposing that route publicly.
+household is matched by the phone in `profile.md`. Set `DEMO_PHONE` to route every household's
+texts to your own number during a demo. Add Twilio signature validation before exposing that
+route publicly.
 
 ## Safety boundary
 

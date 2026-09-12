@@ -158,7 +158,9 @@ function field(profile: string, label: string): string | undefined {
 export async function loadHousehold(kb: KnowledgeBase): Promise<Household> {
   const { content } = await kb.read("profile.md");
   const name = field(content, "Name") ?? kb.userId;
-  const phone = field(content, "Phone");
+  // DEMO_PHONE routes every household's texts to one real number for demos,
+  // so personal numbers never need to be written into tracked seed files.
+  const phone = process.env.DEMO_PHONE?.trim() || field(content, "Phone");
   if (!phone) throw new Error(`profile.md for ${kb.userId} needs a "- Phone:" line`);
   return {
     name,

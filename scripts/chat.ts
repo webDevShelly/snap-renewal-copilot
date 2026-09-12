@@ -42,18 +42,32 @@ async function main(): Promise<void> {
 
   if (args.includes("--sweep")) await turn({ kind: "event", ...renewalSweepEvent() });
 
-  const rl = readline.createInterface({ input: stdin, output: stdout });
-  for (;;) {
-    const line = (await rl.question(`${household.firstName}> `)).trim();
-    if (!line) continue;
-    if (line === "exit" || line === "quit") break;
-    if (line === "/sweep") {
-      await turn({ kind: "event", ...renewalSweepEvent() });
+  // The async iterator buffers lines that arrive while a turn is running, so piped input
+  // (printf 'a\nb\nexit\n' | npm run chat) works as well as an interactive terminal.
+  const interactive = Boolean(stdin.isTTY);
+  const rl = readline.createInterface({ input: stdin, output: stdout, terminal: interactive });
+  let closed = false;
+  rl.on("close", () => {
+    closed = true;
+  });
+  const prompt = () => {
+    if (!closed) rl.prompt();
+  };
+  rl.setPrompt(`${household.firstName}> `);
+  prompt();
+  for await (const raw of rl) {
+    const line = raw.trim();
+    if (!line) {
+      prompt();
       continue;
     }
-    await turn({ kind: "inbound_text", body: line });
+    if (line === "exit" || line === "quit") break;
+    if (!interactive) console.log(`💬  ${household.firstName}: ${line}`);
+    if (line === "/sweep") await turn({ kind: "event", ...renewalSweepEvent() });
+    else await turn({ kind: "inbound_text", body: line });
+    prompt();
   }
-  rl.close();
+  if (!closed) rl.close();
 }
 
 main().catch((error) => {
