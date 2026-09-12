@@ -3,9 +3,16 @@ require('dotenv').config();
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const http = require('node:http');
 const express = require('express');
+const { WebSocketServer } = require('ws');
 const OpenAI = require('openai');
 const twilio = require('twilio');
+const store = require('./lib/store');
+const intake = require('./lib/intake');
+const renewal = require('./lib/renewal');
+const callSessions = require('./lib/callSession');
+const createVoiceRoutes = require('./routes/voice');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -316,8 +323,18 @@ async function handleVonageInbound(req, res) {
     return;
   }
   try {
-    const reply = await generateAssistantReply(from);
+    const reply = await intake.handleInboundText(from, text, {
+      onReady: async (user) => {
+        try {
+          await voiceRoutes.startRenewalCall(user);
+        } catch (error) {
+          console.error('Could not start the renewal call:', error.message);
+          await sendSms(from, 'I could not reach the benefits office just now. I will keep your answers and you can reply CALL to try again.');
+        }
+      }
+    });
     if (!reply) return;
+    store.appendTurn(from, 'assistant', reply);
     saveMessage({ ...(await sendVonageSms({ to: from, body: reply })), aiGenerated: true });
   } catch (error) {
     console.error('Unable to reply to inbound Vonage SMS:', error.message);
@@ -341,6 +358,26 @@ app.all('/webhooks/vonage/status', (req, res) => {
   res.sendStatus(200);
 });
 
+// Outbound helper shared by the intake agent and the call bridge.
+async function sendSms(to, body) {
+  return saveMessage(await sendVonageSms({ to, body }));
+}
+
+const voiceRoutes = createVoiceRoutes({ publicUrl, sendSms });
+app.use('/voice', voiceRoutes.router);
+
+app.get('/api/renewals', (req, res) => {
+  res.json(store.allUsers().map((user) => ({
+    phoneNumber: user.phoneNumber,
+    stage: user.renewal.stage,
+    progress: renewal.progress(user.renewal.collected),
+    collected: user.renewal.collected,
+    updatedAt: user.updatedAt
+  })));
+});
+
+app.get('/api/calls', (req, res) => res.json(callSessions.list()));
+
 app.get('/api/nudges', (req, res) => {
   res.json(Object.entries(NUDGES).map(([token, nudge]) => ({
     token,
@@ -356,9 +393,21 @@ app.use((error, req, res, next) => {
   next(error);
 });
 
-app.listen(port, () => {
-  console.log(`SMS dashboard listening on http://localhost:${port}`);
-  if (!configured()) console.log('Twilio is not configured yet. Copy .env.example to .env and add your credentials.');
+const server = http.createServer(app);
+const voiceSockets = new WebSocketServer({ noServer: true });
+
+// Vonage dials a websocket leg into the conversation; that audio feeds the hold detector.
+server.on('upgrade', (request, socket, head) => {
+  const { pathname, searchParams } = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+  if (pathname !== '/voice/socket') return socket.destroy();
+  voiceSockets.handleUpgrade(request, socket, head, (websocket) => {
+    voiceRoutes.handleSocket(websocket, searchParams.get('session'));
+  });
 });
 
-module.exports = { app, validatePhoneNumber, configured, toE164 };
+server.listen(port, () => {
+  console.log(`SMS dashboard listening on http://localhost:${port}`);
+  if (!configured()) console.log('SMS is not configured yet. Copy .env.example to .env and add your credentials.');
+});
+
+module.exports = { app, server, validatePhoneNumber, configured, toE164 };

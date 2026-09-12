@@ -7,12 +7,14 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.3",
     "openai": "^6.22.0",
-    "twilio": "^5.8.0"
+    "twilio": "^5.8.0",
+    "ws": "^8.21.3"
   }
 }

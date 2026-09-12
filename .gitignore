@@ -11,3 +11,5 @@ sms/.env.*
 !sms/.env.example
 sms/data/messages.json
 sms/*.bak
+sms/data/
+sms/*.key
