@@ -3,3 +3,11 @@ node_modules/
 .env
 .env.local
 *.log
+
+# --- sms/ (Express SMS + Nudge service) ---
+sms/node_modules/
+sms/.env
+sms/.env.*
+!sms/.env.example
+sms/data/messages.json
+sms/*.bak
