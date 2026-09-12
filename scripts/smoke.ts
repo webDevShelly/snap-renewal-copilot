@@ -10,7 +10,11 @@ import path from "node:path";
 async function main(): Promise<void> {
   process.env.OPENAI_AGENTS_DISABLE_TRACING = "1";
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "snap-copilot-"));
-  await fs.cp(path.join(process.cwd(), "data"), tmp, { recursive: true });
+  await fs.cp(path.join(process.cwd(), "data"), tmp, {
+    recursive: true,
+    // seed documents only: leave behind any runtime state from a live run
+    filter: (source) => !/(?:messages\.jsonl|session\.json(?:\..*)?|notes\.md)$/.test(source),
+  });
   process.env.DATA_DIR = tmp;
 
   const { Usage } = await import("@openai/agents");
