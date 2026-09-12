@@ -132,3 +132,26 @@ The schedule itself needs a Trigger.dev account: set `TRIGGER_PROJECT_REF` from
 your project settings, plus `SMS_SERVICE_URL` and `OUTREACH_TOKEN` as
 environment variables in the Trigger.dev dashboard, then `npm run trigger:dev`
 to test or `npm run trigger:deploy` to schedule it for real.
+
+### When the office does not pick up
+
+A benefits line that rings out, drops, or holds forever is the normal case, not
+the exception, so the bridge retries rather than stopping:
+
+- **Unanswered, busy, rejected, failed, timeout, cancelled** — the attempt is
+  over, so it redials.
+- **Answered then completed while still holding** — the line dropped before a
+  person reached us, which also redials.
+- **Still on hold past `CALL_HOLD_TIMEOUT_MS`** (15 minutes by default) — the
+  attempt is hung up and a fresh one placed, since a queue that never produces a
+  person is usually a queue that closed.
+
+Backoff grows with each attempt (`CALL_RETRY_DELAY_MS` times the attempt number)
+and stops at `CALL_MAX_ATTEMPTS`. The user is texted **once** when retries begin,
+not once per attempt, and again if it gives up:
+
+> I tried the benefits office 5 times and could not get through. Your answers
+> are saved. Reply CALL when you want me to try again.
+
+Retries stop the moment a person is detected, and `POST
+/voice/sessions/:id/cancel` stops them by hand.

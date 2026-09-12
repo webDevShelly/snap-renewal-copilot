@@ -5,7 +5,7 @@ const { HoldDetector } = require('./holdDetector');
 // anyway, since the PSTN legs die with the process.
 const sessions = new Map();
 
-const STATES = ['dialing', 'holding', 'human-detected', 'bridging', 'connected', 'ended', 'failed'];
+const STATES = ['dialing', 'holding', 'retrying', 'human-detected', 'bridging', 'connected', 'ended', 'failed'];
 
 function create({ phoneNumber, officeNumber, collected }) {
   const id = crypto.randomUUID();
@@ -19,7 +19,9 @@ function create({ phoneNumber, officeNumber, collected }) {
     listenerCallUuid: null,
     userCallUuid: null,
     state: 'dialing',
+    attempts: 0,
     detector: new HoldDetector(),
+    timers: { hold: null, retry: null },
     events: [],
     createdAt: new Date().toISOString()
   };
@@ -41,7 +43,7 @@ function setState(id, state, detail) {
 }
 
 function list() {
-  return [...sessions.values()].map(({ detector, ...rest }) => rest);
+  return [...sessions.values()].map(({ detector, timers, ...rest }) => rest);
 }
 
 function remove(id) {
