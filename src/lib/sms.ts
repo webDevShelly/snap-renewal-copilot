@@ -26,12 +26,16 @@ export class ConsoleSms implements SmsTransport {
   }
 }
 
-/** Real SMS through Twilio's REST API. Enabled when the three TWILIO_* variables are set. */
+/**
+ * Real SMS through Twilio's REST API. Authenticates with the account SID + auth token, or with
+ * a Twilio API key SID (SK...) + secret when no auth token is configured.
+ */
 export class TwilioSms implements SmsTransport {
   readonly name = "twilio";
   constructor(
     private readonly accountSid: string,
-    private readonly authToken: string,
+    private readonly authUser: string,
+    private readonly authSecret: string,
     private readonly from: string,
   ) {}
 
@@ -40,7 +44,7 @@ export class TwilioSms implements SmsTransport {
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${Buffer.from(`${this.accountSid}:${this.authToken}`).toString("base64")}`,
+        Authorization: `Basic ${Buffer.from(`${this.authUser}:${this.authSecret}`).toString("base64")}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({ To: to, From: this.from, Body: body }),
@@ -49,10 +53,18 @@ export class TwilioSms implements SmsTransport {
   }
 }
 
+/**
+ * Twilio when configured, otherwise the console. Accepts either TWILIO_FROM_NUMBER or
+ * TWILIO_PHONE_NUMBER for the sender, and either an auth token or an API key SID + secret.
+ */
 export function smsTransportFromEnv(options: { quiet?: boolean } = {}): SmsTransport {
-  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER } = process.env;
-  if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_FROM_NUMBER) {
-    return new TwilioSms(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER);
+  const env = process.env;
+  const accountSid = env.TWILIO_ACCOUNT_SID;
+  const from = env.TWILIO_FROM_NUMBER || env.TWILIO_PHONE_NUMBER;
+  const authUser = env.TWILIO_AUTH_TOKEN ? accountSid : env.TWILIO_API_KEY_SID;
+  const authSecret = env.TWILIO_AUTH_TOKEN || env.TWILIO_API_KEY_SECRET;
+  if (accountSid && from && authUser && authSecret) {
+    return new TwilioSms(accountSid, authUser, authSecret, from);
   }
   return new ConsoleSms(options.quiet);
 }

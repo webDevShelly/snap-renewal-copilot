@@ -181,12 +181,14 @@ ${ctx.household.profile.trim()}
 }
 
 export function createCopilotAgent(options: { model?: string | Model } = {}): Agent<CopilotContext> {
+  // Explicit override, else OPENAI_DEFAULT_MODEL, else the SDK's default model.
+  // OPENAI_MODEL is deliberately ignored: it belongs to the sms/ service's config.
+  const model = options.model ?? process.env.OPENAI_DEFAULT_MODEL;
   return new Agent<CopilotContext>({
     name: "SNAP Renewal Copilot",
     instructions: (runContext) => buildInstructions(runContext.context),
     tools: [sendTextMessage, listDocuments, readDocument, searchDocuments, saveNote, updateDocument],
-    // The SDK picks its default model (or OPENAI_DEFAULT_MODEL) when none is given.
-    ...(options.model ? { model: options.model } : {}),
+    ...(model ? { model } : {}),
   });
 }
 
