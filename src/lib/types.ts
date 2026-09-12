@@ -1,20 +1,16 @@
-export type DocumentStatus = "RECEIVED" | "MISSING" | "NEEDS_REVIEW";
+import type { TextMessage } from "./sms";
 
-export type RequiredDocument = {
-  id: string;
-  label: string;
-  status: DocumentStatus;
-  dueDate?: string;
+/** What wakes the agent up: a text from the household, or a scheduled/system event. */
+export type TurnInput =
+  | { kind: "inbound_text"; body: string }
+  | { kind: "event"; name: string; detail?: string };
+
+export type TurnResult = {
+  userId: string;
+  /** The agent's internal one-line summary (never shown to the household). */
+  summary: string;
+  /** Texts the agent sent during this turn. */
+  sent: TextMessage[];
+  /** Tool names invoked this turn, in order. */
+  toolCalls: string[];
 };
-
-export type RenewalStatus = {
-  benefitEndDate: string;
-  renewalDueDate: string;
-  status: "NOT_DUE" | "DUE_SOON" | "ACTION_REQUIRED" | "READY_FOR_REVIEW" | "SUBMITTED";
-  portalMessage: string;
-};
-
-export type AgentAction =
-  | { type: "SEND_DOCUMENT_REQUEST"; document: RequiredDocument; uploadUrl: string }
-  | { type: "CREATE_RENEWAL_DRAFT"; draftId: string }
-  | { type: "NO_ACTION"; reason: string };
