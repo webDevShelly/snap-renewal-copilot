@@ -18,3 +18,7 @@ data/users/*/messages.jsonl
 data/users/*/session.json
 data/users/*/session.json.*.tmp
 data/users/*/notes.md
+
+# --- trigger.dev ---
+sms/data/
+sms/*.key
