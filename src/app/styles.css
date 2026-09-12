@@ -1,0 +1,18 @@
+:root { color: #10251d; background: #f7f5ed; font-family: Arial, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 850px; margin: 0 auto; padding: 80px 28px; }
+.eyebrow { color: #3f6b50; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+h1 { max-width: 760px; font-size: clamp(2.5rem, 7vw, 5.6rem); line-height: .95; margin: 18px 0; }
+.lede { font-size: 1.25rem; max-width: 680px; line-height: 1.5; }
+.card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 36px 0 24px; background: #c8d5ca; border: 1px solid #c8d5ca; }
+.card div { background: #fffef8; padding: 22px; }
+.card span { display: block; color: #52715d; font-size: .85rem; margin-bottom: 9px; }
+.card strong { font-size: 1.1rem; }
+button { background: #14532d; border: 0; border-radius: 99px; color: white; cursor: pointer; font-size: 1rem; font-weight: 700; padding: 15px 22px; }
+button:disabled { opacity: .7; cursor: wait; }
+.result { background: #e2f4e4; border-radius: 10px; margin-top: 28px; padding: 20px 24px; }
+.result h2 { margin-top: 0; }
+code { overflow-wrap: anywhere; }
+.fine-print { color: #52645a; font-size: .9rem; margin-top: 44px; }
+@media (max-width: 650px) { .card { grid-template-columns: 1fr; } }
