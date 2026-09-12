@@ -33,8 +33,12 @@ const NORMALIZERS = {
     return { value: /^\s*none\b/i.test(text) ? 'NONE' : text.trim() };
   },
   caseNumber(text) {
-    const match = text.match(/[A-Za-z0-9-]{4,}/);
-    return match ? { value: match[0].toUpperCase() } : { error: 'Please reply with your case number.' };
+    // A case number always carries digits. Without this, a name or a stray word
+    // passes as a case number and the packet goes to the office wrong.
+    const match = text.match(/\b(?=[A-Za-z0-9-]*\d)[A-Za-z0-9-]{4,}\b/);
+    return match
+      ? { value: match[0].toUpperCase() }
+      : { error: 'That does not look like a case number. It usually has digits, like 48291 or SNAP-48291.' };
   }
 };
 

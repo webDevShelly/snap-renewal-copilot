@@ -74,6 +74,18 @@ test('re-asks instead of storing an unparseable answer', async (t) => {
   assert.equal(store.getUser(PHONE).renewal.collected.dateOfBirth, undefined, 'nothing bad was stored');
 });
 
+test('rejects a case number with no digits in it', async (t) => {
+  reset();
+  t.after(reset);
+
+  await intake.handleInboundText(PHONE, 'RENEW');
+  await intake.handleInboundText(PHONE, 'Maria Gomez');
+  const reply = await intake.handleInboundText(PHONE, 'Maria Gomez');
+
+  assert.match(reply, /does not look like a case number/, 'a name is not a case number');
+  assert.equal(store.getUser(PHONE).renewal.collected.caseNumber, undefined, 'nothing bad was stored');
+});
+
 test('STATUS reports progress without advancing', async (t) => {
   reset();
   t.after(reset);
