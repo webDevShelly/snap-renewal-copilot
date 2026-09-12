@@ -1,22 +1,30 @@
 {
   "name": "snap-renewal-copilot",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "typecheck": "tsc --noEmit",
+    "chat": "tsx scripts/chat.ts",
+    "sweep": "tsx scripts/sweep.ts",
+    "reset": "tsx scripts/reset.ts",
+    "test": "tsx scripts/smoke.ts"
   },
   "dependencies": {
+    "@openai/agents": "^0.18.0",
     "next": "15.2.4",
+    "openai": "^7.15.0",
     "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }
