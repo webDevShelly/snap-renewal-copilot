@@ -5,13 +5,6 @@ node_modules/
 *.log
 *.tsbuildinfo
 
-# --- sms/ (Express SMS + Nudge service) ---
-sms/node_modules/
-sms/.env
-sms/.env.*
-!sms/.env.example
-sms/data/messages.json
-sms/*.bak
 
 # per-household runtime state for the copilot agent; seed documents stay tracked
 data/users/*/messages.jsonl
@@ -19,6 +12,5 @@ data/users/*/session.json
 data/users/*/session.json.*.tmp
 data/users/*/notes.md
 
-# --- trigger.dev ---
-sms/data/
-sms/*.key
+# Vonage application private key
+*.key

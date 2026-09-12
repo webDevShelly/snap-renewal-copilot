@@ -27,6 +27,9 @@ async function main(): Promise<void> {
   const { KnowledgeBase, loadHousehold } = await import("../src/lib/kb");
   const { MessageLog, ConsoleSms, toGsmSafe } = await import("../src/lib/sms");
   const { FileSession } = await import("../src/lib/session");
+  const { ConsoleVoice, vonageJwt, withinCallWindow } = await import("../src/lib/voice");
+  const { generateKeyPairSync, createVerify } = await import("node:crypto");
+  process.env.COPILOT_CALL_WINDOW = "0-24";
   const { householdTextGuardrail, runTurn } = await import("../src/lib/agent");
 
   const userId = "maria-demo";
@@ -84,6 +87,25 @@ async function main(): Promise<void> {
 
   await check("curly quotes and dashes become GSM-safe ASCII before sending", () => {
     assert.equal(toGsmSafe("It\u2019s time \u2014 \u201Csame\u201D or new\u2026"), "It's time - \"same\" or new...");
+  });
+
+  console.log("voice");
+  await check("Vonage JWT is RS256, carries the application id, and verifies with the public key", () => {
+    const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const pem = privateKey.export({ type: "pkcs1", format: "pem" }).toString();
+    const token = vonageJwt("app-123", pem);
+    const [h, p, sig] = token.split(".");
+    assert.equal(JSON.parse(Buffer.from(h, "base64url").toString()).alg, "RS256");
+    assert.equal(JSON.parse(Buffer.from(p, "base64url").toString()).application_id, "app-123");
+    const verifier = createVerify("RSA-SHA256");
+    verifier.update(`${h}.${p}`);
+    assert.ok(verifier.verify(publicKey, Buffer.from(sig, "base64url")));
+  });
+  await check("call window honours COPILOT_CALL_WINDOW", () => {
+    assert.equal(withinCallWindow(), true);
+    process.env.COPILOT_CALL_WINDOW = "0-0";
+    assert.equal(withinCallWindow(), false);
+    process.env.COPILOT_CALL_WINDOW = "0-24";
   });
 
   console.log("message log and session");
@@ -165,10 +187,15 @@ async function main(): Promise<void> {
     [call("send_text_message", { body: "Maria, HRA will pay you $291 next month." }, "c2")],
     [call("send_text_message", { body: "Hi Maria, it's your SNAP copilot. Your recert interview is Oct 6 at 10:30am. Step 1: submit the recert form in ACCESS HRA before then. Want help?" }, "c3")],
     [call("save_note", { note: "Sent first recert nudge." }, "c4")],
+    [call("place_call", { body: "Hi Maria, this is your SNAP renewal helper. Please submit your form before October sixth." }, "c5")],
     [say("Sent Maria the first nudge; waiting on her reply.")],
   ]);
 
-  const first = await runTurn(userId, { kind: "event", name: "renewal_sweep", detail: "test sweep" }, { model, transport: new ConsoleSms(true) });
+  const first = await runTurn(
+    userId,
+    { kind: "event", name: "renewal_sweep", detail: "test sweep" },
+    { model, transport: new ConsoleSms(true), voice: new ConsoleVoice(true) },
+  );
   await check("system prompt carries the household profile and today's date", () => {
     assert.match(String(model.requests[0].systemInstructions), /Maria Alvarez/);
     assert.match(String(model.requests[0].systemInstructions), /Today is/);
@@ -179,21 +206,27 @@ async function main(): Promise<void> {
   await check("guardrail rejection is what the model sees for the dollar text", () => {
     assert.match(resultText(model.requests[2], "c2"), /Blocked: do not state a benefit dollar amount/);
   });
-  await check("only the clean text was sent and logged", async () => {
-    assert.equal(first.sent.length, 1);
+  await check("only the clean text was sent, and the call was logged as a call", async () => {
+    assert.equal(first.sent.length, 2);
     assert.match(first.sent[0].body, /Oct 6/);
+    assert.match(first.sent[1].body, /^\[call\] Hi Maria/);
+    assert.equal(first.sent[1].channel, "console-voice");
     const logged = await new MessageLog(userId).all();
-    assert.equal(logged.length, 1);
-    assert.equal(logged[0].direction, "outbound");
+    assert.equal(logged.length, 2);
+    assert.ok(logged.every((m) => m.direction === "outbound"));
   });
   await check("note was written and summary returned", async () => {
     assert.match((await kb.read("notes.md")).content, /Sent first recert nudge/);
     assert.equal(first.summary, "Sent Maria the first nudge; waiting on her reply.");
-    assert.deepEqual(first.toolCalls, ["read_document", "send_text_message", "send_text_message", "save_note"]);
+    assert.deepEqual(first.toolCalls, ["read_document", "send_text_message", "send_text_message", "save_note", "place_call"]);
   });
 
   const model2 = new ScriptedModel([[say("Acknowledged; nothing to send.")]]);
-  const second = await runTurn(userId, { kind: "inbound_text", body: "ok I will do it tonight" }, { model: model2, transport: new ConsoleSms(true) });
+  const second = await runTurn(
+    userId,
+    { kind: "inbound_text", body: "ok I will do it tonight" },
+    { model: model2, transport: new ConsoleSms(true), voice: new ConsoleVoice(true) },
+  );
   await check("second turn replays the persisted session history", () => {
     const items = Array.isArray(model2.requests[0].input) ? model2.requests[0].input : [];
     assert.ok(items.some((i) => i.type === "function_call" && (i as { name?: string }).name === "read_document"));
@@ -202,8 +235,8 @@ async function main(): Promise<void> {
   });
   await check("inbound text was logged before the run", async () => {
     const logged = await new MessageLog(userId).all();
-    assert.equal(logged.length, 2);
-    assert.equal(logged[1].direction, "inbound");
+    assert.equal(logged.length, 3);
+    assert.equal(logged[2].direction, "inbound");
   });
 
   await fs.rm(tmp, { recursive: true, force: true });

@@ -11,6 +11,7 @@ import { z } from "zod";
 import { KnowledgeBase, loadHousehold, type Household } from "./kb";
 import { MessageLog, smsTransportFromEnv, type SmsTransport, type TextMessage } from "./sms";
 import { FileSession } from "./session";
+import { voiceTransportFromEnv, withinCallWindow, type VoiceTransport } from "./voice";
 import type { TurnInput, TurnResult } from "./types";
 
 /** Everything a tool can reach during one run. Passed as the Agents SDK run context. */
@@ -19,6 +20,7 @@ export type CopilotContext = {
   kb: KnowledgeBase;
   household: Household;
   sms: SmsTransport;
+  voice: VoiceTransport;
   log: MessageLog;
   sentThisTurn: TextMessage[];
   today: string;
@@ -105,6 +107,31 @@ const sendTextMessage = tool({
   },
 });
 
+const placeCall = tool({
+  name: "place_call",
+  description:
+    "Ring the household's phone and read a short spoken message aloud. Use only when they ask to be called, or when a deadline is within 3 days and they have not answered texts. Under 60 words, plain spoken English, no acronyms, no URLs. Calls are refused outside 8 AM to 9 PM New York time; send a text instead.",
+  parameters: z.object({
+    body: z.string().describe("Exactly what the call says, under 60 words, as a person would say it aloud."),
+  }),
+  inputGuardrails: [householdTextGuardrail],
+  execute: async ({ body }, runContext?: RunContext<CopilotContext>) => {
+    const ctx = ctxOf(runContext);
+    if (!withinCallWindow()) {
+      throw new Error("Calls are only placed between 8 AM and 9 PM New York time. Send a text instead.");
+    }
+    const { callId } = await ctx.voice.call(ctx.household.phone, body);
+    const message = await ctx.log.append({
+      direction: "outbound",
+      phone: ctx.household.phone,
+      body: `[call] ${body}`,
+      channel: `${ctx.voice.name}-voice`,
+    });
+    ctx.sentThisTurn.push(message);
+    return { called: true, callId, at: message.at, to: ctx.household.phone };
+  },
+});
+
 const listDocuments = tool({
   name: "list_documents",
   description:
@@ -166,7 +193,7 @@ Household you are helping:
 ${ctx.household.profile.trim()}
 
 ## How you communicate
-- The household can ONLY hear you through the send_text_message tool. Anything you write outside that tool is an internal note for the operator log; the household never sees it.
+- The household can ONLY hear you through the send_text_message tool and, rarely, the place_call tool. Anything you write outside those tools is an internal note for the operator log; the household never sees it.
 - Text like a helpful caseworker friend: plain words, short sentences, no jargon, no acronyms without saying what they mean. One question or one ask per text. Under 300 characters each. Two short texts beat one long one.
 - Every text must move them toward a concrete next step: the thing to do, where to do it, and by when. Prefer a real date over "soon".
 - Reply in the language of the household's most recent text. If they ask for another language, use it until they switch back. Do not send a text that repeats something you already told them unless a deadline is close.
@@ -176,6 +203,10 @@ ${ctx.household.profile.trim()}
 - documents/2025-11-on-file.md is what the household reported and proved last time. documents/2026-recert-answers.md is where this year's answers go. Your FIRST job at recertification is confirming that information: ask about one item per text, in the order the answers file lists them, quoting the value on file so they can reply "same" or give the new one. After every answer, rewrite that row in 2026-recert-answers.md with update_document and record it with save_note, before you ask the next item. Only when every row is answered do you move on to submitting the form and uploading documents.
 - shared/ documents are program reference. Take phone numbers, rules, and deadlines from there, not from memory. If the answer is not in the knowledge base, say you are not sure and give the NYC SNAP line from shared/snap-basics.md.
 - documents.md is the source of truth for what is still outstanding. When the household tells you something is done (form submitted, document uploaded, interview completed), update that row with update_document in the same turn AND record it with save_note, before you reply. Never tell them a step is still outstanding if they have told you it is done; trust them and update the file.
+
+## Calling
+- Texting is the default. Place a call only when the household asks to be called, or when a deadline is within 3 days and they have not answered your texts.
+- A call is one spoken message under 60 words: who you are, the one thing to do, and by when. Say numbers as words a person would say aloud. Never read a URL. After the call, send one text with the same next step so they have it in writing.
 
 ## Hard limits
 - Never say whether they are or are not eligible, approved, or denied, and never quote a benefit dollar amount. HRA decides; you explain what to do and how they will hear.
@@ -193,12 +224,12 @@ ${ctx.household.profile.trim()}
 
 export function createCopilotAgent(options: { model?: string | Model } = {}): Agent<CopilotContext> {
   // Explicit override, else OPENAI_DEFAULT_MODEL, else the SDK's default model.
-  // OPENAI_MODEL is deliberately ignored: it belongs to the sms/ service's config.
+  // OPENAI_MODEL is deliberately ignored; only OPENAI_DEFAULT_MODEL overrides the SDK default.
   const model = options.model ?? process.env.OPENAI_DEFAULT_MODEL;
   return new Agent<CopilotContext>({
     name: "SNAP Renewal Copilot",
     instructions: (runContext) => buildInstructions(runContext.context),
-    tools: [sendTextMessage, listDocuments, readDocument, searchDocuments, saveNote, updateDocument],
+    tools: [sendTextMessage, placeCall, listDocuments, readDocument, searchDocuments, saveNote, updateDocument],
     ...(model ? { model } : {}),
   });
 }
@@ -230,6 +261,7 @@ export function renewalSweepEvent(): { name: string; detail: string } {
 
 export type RunTurnOptions = {
   transport?: SmsTransport;
+  voice?: VoiceTransport;
   /** Suppress console printing of outbound texts (used by the web UI). */
   quiet?: boolean;
   maxTurns?: number;
@@ -245,8 +277,9 @@ export async function runTurn(userId: string, input: TurnInput, options: RunTurn
   const household = await loadHousehold(kb);
   const log = new MessageLog(userId);
   const sms = options.transport ?? smsTransportFromEnv({ quiet: options.quiet });
+  const voice = options.voice ?? voiceTransportFromEnv({ quiet: options.quiet });
   const now = new Date();
-  const ctx: CopilotContext = { userId, kb, household, sms, log, sentThisTurn: [], today: formatDay(now) };
+  const ctx: CopilotContext = { userId, kb, household, sms, voice, log, sentThisTurn: [], today: formatDay(now) };
 
   let message: string;
   if (input.kind === "inbound_text") {

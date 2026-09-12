@@ -62,6 +62,7 @@ src/lib/
   agent.ts                         Agent, tools, guardrail, runTurn()
   kb.ts                            KnowledgeBase: list / read / search / write / appendNote
   sms.ts                           SmsTransport (console or Vonage) and MessageLog
+  voice.ts                         VoiceTransport (console or Vonage Voice API) and the call window
   session.ts                       FileSession implementing the SDK's Session interface
 scripts/
   chat.ts  sweep.ts  reset.ts  smoke.ts
@@ -69,7 +70,8 @@ src/app/
   page.tsx                         phone thread + knowledge base viewer
   api/agent/run                    POST { message } or { event: "renewal_sweep" }
   api/thread                       GET the thread and documents
-  api/sms/inbound                  Vonage inbound webhook
+  api/sms/inbound                  Vonage inbound SMS webhook
+  api/voice/answer, api/voice/event  Vonage voice webhooks (calls placed by the agent carry their own script)
 ```
 
 ## How the OpenAI pieces fit
@@ -82,19 +84,26 @@ src/app/
 
 ## Real SMS
 
-Set `VONAGE_API_KEY`, `VONAGE_API_SECRET`, and `VONAGE_SENDER` (the same variables the `sms/`
-service uses) and outbound texts go over Vonage. Point the Vonage number's inbound SMS webhook at
+Set `VONAGE_API_KEY`, `VONAGE_API_SECRET`, and `VONAGE_SENDER` and outbound texts go over Vonage. Point the Vonage number's inbound SMS webhook at
 `/api/sms/inbound`; the household is matched by the phone in `profile.md`. Set `DEMO_PHONE` to
 route every household's texts to your own number during a demo. A Vonage trial account only
 delivers to numbers registered as test numbers in its dashboard. Add Vonage signature
 verification before exposing the webhook publicly.
 
+## Calls
+
+With `VONAGE_APPLICATION_ID` and the application's private key configured, the agent gains a
+`place_call` tool: one spoken message under 60 words, read by text-to-speech, only when the
+household asks for a call or a deadline is within three days and texts have gone unanswered, and
+only between 8 AM and 9 PM New York time. The same guardrail that screens texts screens the
+spoken script. Calls appear in the thread as 📞 entries.
+
 ## The SNAP office number
 
 The knowledge base never contains a real agency phone number. Every "call SNAP" instruction
 reads `{{SNAP_OFFICE_NUMBER}}`, which is filled from the `SNAP_OFFICE_NUMBER` env var when a
-document is read. Set it to a teammate's phone for a demo, and the same variable drives the
-`sms/` service's call bridge. Unset, the agent says "the phone number printed on your notice".
+document is read. Set it to a teammate's phone for a demo. Unset, the agent says "the phone
+number printed on your notice".
 
 ## Safety boundary
 

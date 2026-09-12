@@ -45,8 +45,7 @@ type VonageSmsResponse = {
 };
 
 /**
- * Real SMS through the Vonage SMS API. Same request shape as the sms/ service, so both apps
- * can share one Vonage account and sender.
+ * Real SMS through the Vonage SMS API.
  */
 export class VonageSms implements SmsTransport {
   readonly name = "vonage";

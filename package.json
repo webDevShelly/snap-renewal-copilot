@@ -10,13 +10,10 @@
     "chat": "tsx scripts/chat.ts",
     "sweep": "tsx scripts/sweep.ts",
     "reset": "tsx scripts/reset.ts",
-    "test": "tsx scripts/smoke.ts",
-    "trigger:dev": "npx trigger.dev@latest dev",
-    "trigger:deploy": "npx trigger.dev@latest deploy"
+    "test": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "@openai/agents": "^0.18.0",
-    "@trigger.dev/sdk": "^4.5.16",
     "next": "15.2.4",
     "openai": "^7.15.0",
     "react": "19.0.0",
@@ -27,7 +24,6 @@
     "@types/node": "^22.20.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "trigger.dev": "^4.5.16",
     "tsx": "^4.23.13",
     "typescript": "^5.9.3"
   }
