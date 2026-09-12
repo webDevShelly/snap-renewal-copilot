@@ -1,11 +1,16 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const storeFile = path.join(__dirname, '..', 'data', 'users.json');
+// Resolved per call so tests (and a deployment with a mounted volume) can point
+// the knowledge base somewhere else via DATA_DIR.
+function storePath() {
+  const directory = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+  return path.join(directory, 'users.json');
+}
 
 function readAll() {
   try {
-    return JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+    return JSON.parse(fs.readFileSync(storePath(), 'utf8'));
   } catch (error) {
     if (error.code === 'ENOENT') return {};
     throw error;
@@ -13,10 +18,11 @@ function readAll() {
 }
 
 function writeAll(users) {
-  fs.mkdirSync(path.dirname(storeFile), { recursive: true });
-  const temporaryFile = `${storeFile}.${process.pid}.tmp`;
+  const file = storePath();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const temporaryFile = `${file}.${process.pid}.tmp`;
   fs.writeFileSync(temporaryFile, JSON.stringify(users, null, 2));
-  fs.renameSync(temporaryFile, storeFile);
+  fs.renameSync(temporaryFile, file);
 }
 
 function blankUser(phoneNumber) {
@@ -63,4 +69,4 @@ function allUsers() {
   return Object.values(readAll());
 }
 
-module.exports = { getUser, updateUser, appendTurn, allUsers };
+module.exports = { getUser, updateUser, appendTurn, allUsers, storePath };

@@ -86,3 +86,49 @@ detector, and the bridge orchestration without placing a call.
 - Vonage trial accounts only reach whitelisted numbers; failures show as
   error code `29`.
 - Call sessions live in memory and do not survive a restart.
+
+## Scheduled renewal reminders
+
+A Trigger.dev schedule (`trigger/renewalReminder.ts`, in the repo root) nudges
+people before their renewal is due, and asks them to confirm the recurring costs
+that drive their deductions:
+
+> Hi Maria — this is Benefit Bridge. Your SNAP renewal is due September 24, in 12
+> days. Quick check: are you still paying $1,200 rent, $180 utilities and $400
+> childcare each month? Reply YES if nothing changed, or tell me what is different.
+
+The schedule does not send anything itself. It POSTs to `/tasks/renewal-reminder`
+on this service, which owns the knowledge base and the Vonage credentials, so
+there is only one place that knows how to text someone. The endpoint takes a
+bearer token (`OUTREACH_TOKEN`), not the dashboard's basic auth.
+
+`YES` confirms and closes the loop, anything else is kept verbatim as a
+correction for the caseworker, and `RENEW` jumps straight into collection.
+
+### Who gets texted
+
+`lib/reminders.js` deliberately skips people it would be rude or pointless to
+text: anyone who replied `STOP`, anyone already mid-intake or on a call, anyone
+whose renewal is further out than `windowDays` (21 by default), and anyone
+texted in the last 7 days. That quiet period is what stops a daily cron from
+becoming a daily nag.
+
+### Running it
+
+```bash
+node scripts/seed-demo-user.js +15551234567   # give the sweep someone to find
+npm start
+```
+
+Dry-run the sweep without sending anything:
+
+```bash
+curl -s -X POST localhost:3000/tasks/renewal-reminder \
+  -H "Authorization: Bearer $OUTREACH_TOKEN" \
+  -H 'Content-Type: application/json' -d '{"dryRun":true}'
+```
+
+The schedule itself needs a Trigger.dev account: set `TRIGGER_PROJECT_REF` from
+your project settings, plus `SMS_SERVICE_URL` and `OUTREACH_TOKEN` as
+environment variables in the Trigger.dev dashboard, then `npm run trigger:dev`
+to test or `npm run trigger:deploy` to schedule it for real.

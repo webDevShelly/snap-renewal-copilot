@@ -13,6 +13,7 @@ const intake = require('./lib/intake');
 const renewal = require('./lib/renewal');
 const callSessions = require('./lib/callSession');
 const createVoiceRoutes = require('./routes/voice');
+const reminders = require('./lib/reminders');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -365,6 +366,28 @@ async function sendSms(to, body) {
 
 const voiceRoutes = createVoiceRoutes({ publicUrl, sendSms });
 app.use('/voice', voiceRoutes.router);
+
+// Called by the Trigger.dev schedule, so it carries its own bearer token rather
+// than sitting behind the dashboard's basic auth.
+app.post('/tasks/renewal-reminder', async (req, res) => {
+  const expected = process.env.OUTREACH_TOKEN;
+  if (!expected) return res.status(503).json({ error: 'OUTREACH_TOKEN is not set.' });
+  const provided = (req.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!safelyMatches(provided, expected)) return res.status(401).json({ error: 'Bad or missing token.' });
+
+  try {
+    const summary = await reminders.sweep({
+      sendSms,
+      dryRun: req.body?.dryRun === true,
+      windowDays: Number(req.body?.windowDays) || undefined
+    });
+    console.log(`Renewal reminder sweep: ${summary.matched} of ${summary.considered} users texted.`);
+    res.json(summary);
+  } catch (error) {
+    console.error('Renewal reminder sweep failed:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.get('/api/renewals', (req, res) => {
   res.json(store.allUsers().map((user) => ({

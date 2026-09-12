@@ -1,3 +1,7 @@
+const os = require('node:os');
+const fsSetup = require('node:fs');
+process.env.DATA_DIR = fsSetup.mkdtempSync(require('node:path').join(os.tmpdir(), 'bb-intake-'));
+
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -10,7 +14,7 @@ const renewal = require('../lib/renewal');
 const PHONE = '+15550001111';
 
 function reset() {
-  const file = path.join(__dirname, '..', 'data', 'users.json');
+  const file = store.storePath();
   if (!fs.existsSync(file)) return;
   const users = JSON.parse(fs.readFileSync(file, 'utf8'));
   delete users[PHONE];

@@ -93,6 +93,22 @@ async function handleInboundText(phoneNumber, incomingText, { onReady } = {}) {
     return ask(first, 'I can get your SNAP renewal together, then call the office and wait on hold for you. A few quick questions.');
   }
 
+  // Reply to the scheduled renewal reminder.
+  if (stage === 'confirming') {
+    if (/^\s*(renew|renewal|start)\b/i.test(text)) {
+      const first = renewal.nextField(collected) || renewal.RENEWAL_FIELDS[0];
+      store.updateUser(phoneNumber, { renewal: { stage: 'collecting', askedFor: first.id } });
+      return ask(first, 'Great, let us get it together.');
+    }
+    if (/^\s*(yes|yep|yeah|correct|same|no change|nothing)\b/i.test(text)) {
+      store.updateUser(phoneNumber, { renewal: { stage: 'idle' } });
+      return 'Thanks for confirming, I noted that nothing changed. Reply RENEW when you are ready and I will get your renewal together, then call the office and wait on hold for you.';
+    }
+    // Anything else is a correction. Keep it verbatim for the caseworker.
+    store.updateUser(phoneNumber, { renewal: { stage: 'idle', expenseNote: text } });
+    return 'Got it, I noted that change and will pass it along. Reply RENEW when you are ready and I will get the rest together and call the office for you.';
+  }
+
   if (stage === 'collecting') {
     const field = renewal.RENEWAL_FIELDS.find((item) => item.id === askedFor) || renewal.nextField(collected);
     if (!field) return 'Everything is collected. Reply CALL when you are ready for me to phone the office.';
