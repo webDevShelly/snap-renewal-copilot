@@ -59,7 +59,7 @@ data/
 src/lib/
   agent.ts                         Agent, tools, guardrail, runTurn()
   kb.ts                            KnowledgeBase: list / read / search / write / appendNote
-  sms.ts                           SmsTransport (console or Twilio) and MessageLog
+  sms.ts                           SmsTransport (console or Vonage) and MessageLog
   session.ts                       FileSession implementing the SDK's Session interface
 scripts/
   chat.ts  sweep.ts  reset.ts  smoke.ts
@@ -67,7 +67,7 @@ src/app/
   page.tsx                         phone thread + knowledge base viewer
   api/agent/run                    POST { message } or { event: "renewal_sweep" }
   api/thread                       GET the thread and documents
-  api/sms/inbound                  Twilio inbound webhook
+  api/sms/inbound                  Vonage inbound webhook
 ```
 
 ## How the OpenAI pieces fit
@@ -80,11 +80,12 @@ src/app/
 
 ## Real SMS
 
-Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` and outbound texts go
-over Twilio. Point the number's inbound messaging webhook at `POST /api/sms/inbound`; the
-household is matched by the phone in `profile.md`. Set `DEMO_PHONE` to route every household's
-texts to your own number during a demo. Add Twilio signature validation before exposing that
-route publicly.
+Set `VONAGE_API_KEY`, `VONAGE_API_SECRET`, and `VONAGE_SENDER` (the same variables the `sms/`
+service uses) and outbound texts go over Vonage. Point the Vonage number's inbound SMS webhook at
+`/api/sms/inbound`; the household is matched by the phone in `profile.md`. Set `DEMO_PHONE` to
+route every household's texts to your own number during a demo. A Vonage trial account only
+delivers to numbers registered as test numbers in its dashboard. Add Vonage signature
+verification before exposing the webhook publicly.
 
 ## Safety boundary
 

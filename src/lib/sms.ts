@@ -17,7 +17,7 @@ export interface SmsTransport {
   send(to: string, body: string): Promise<void>;
 }
 
-/** Prints outbound texts to the terminal. Default when Twilio is not configured. */
+/** Prints outbound texts to the terminal. Default when no SMS provider is configured. */
 export class ConsoleSms implements SmsTransport {
   readonly name = "console";
   constructor(private readonly quiet = false) {}
@@ -26,45 +26,46 @@ export class ConsoleSms implements SmsTransport {
   }
 }
 
+type VonageSmsResponse = {
+  messages?: Array<{ status?: string | number; "error-text"?: string; "message-id"?: string }>;
+  "error-code-label"?: string;
+};
+
 /**
- * Real SMS through Twilio's REST API. Authenticates with the account SID + auth token, or with
- * a Twilio API key SID (SK...) + secret when no auth token is configured.
+ * Real SMS through the Vonage SMS API. Same request shape as the sms/ service, so both apps
+ * can share one Vonage account and sender.
  */
-export class TwilioSms implements SmsTransport {
-  readonly name = "twilio";
+export class VonageSms implements SmsTransport {
+  readonly name = "vonage";
   constructor(
-    private readonly accountSid: string,
-    private readonly authUser: string,
-    private readonly authSecret: string,
+    private readonly apiKey: string,
+    private readonly apiSecret: string,
     private readonly from: string,
   ) {}
 
   async send(to: string, body: string): Promise<void> {
-    const url = `https://api.twilio.com/2010-04-01/Accounts/${this.accountSid}/Messages.json`;
-    const response = await fetch(url, {
+    const response = await fetch("https://rest.nexmo.com/sms/json", {
       method: "POST",
       headers: {
-        Authorization: `Basic ${Buffer.from(`${this.authUser}:${this.authSecret}`).toString("base64")}`,
+        Authorization: `Basic ${Buffer.from(`${this.apiKey}:${this.apiSecret}`).toString("base64")}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: new URLSearchParams({ To: to, From: this.from, Body: body }),
+      body: new URLSearchParams({ from: this.from, to: to.replace(/^\+/, ""), text: body }),
     });
-    if (!response.ok) throw new Error(`Twilio rejected the message (${response.status}): ${await response.text()}`);
+    const result = (await response.json().catch(() => ({}))) as VonageSmsResponse;
+    const message = result.messages?.[0];
+    if (!response.ok || !message || String(message.status) !== "0") {
+      const detail = message?.["error-text"] ?? result["error-code-label"] ?? `HTTP ${response.status}`;
+      throw new Error(`Vonage rejected the message: ${detail}`);
+    }
   }
 }
 
-/**
- * Twilio when configured, otherwise the console. Accepts either TWILIO_FROM_NUMBER or
- * TWILIO_PHONE_NUMBER for the sender, and either an auth token or an API key SID + secret.
- */
+/** Vonage when VONAGE_API_KEY, VONAGE_API_SECRET, and VONAGE_SENDER are set; otherwise the console. */
 export function smsTransportFromEnv(options: { quiet?: boolean } = {}): SmsTransport {
-  const env = process.env;
-  const accountSid = env.TWILIO_ACCOUNT_SID;
-  const from = env.TWILIO_FROM_NUMBER || env.TWILIO_PHONE_NUMBER;
-  const authUser = env.TWILIO_AUTH_TOKEN ? accountSid : env.TWILIO_API_KEY_SID;
-  const authSecret = env.TWILIO_AUTH_TOKEN || env.TWILIO_API_KEY_SECRET;
-  if (accountSid && from && authUser && authSecret) {
-    return new TwilioSms(accountSid, authUser, authSecret, from);
+  const { VONAGE_API_KEY, VONAGE_API_SECRET, VONAGE_SENDER } = process.env;
+  if (VONAGE_API_KEY && VONAGE_API_SECRET && VONAGE_SENDER) {
+    return new VonageSms(VONAGE_API_KEY, VONAGE_API_SECRET, VONAGE_SENDER);
   }
   return new ConsoleSms(options.quiet);
 }

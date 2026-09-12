@@ -171,9 +171,13 @@ export async function loadHousehold(kb: KnowledgeBase): Promise<Household> {
   };
 }
 
-/** Find the household whose profile lists this phone number (used for inbound SMS webhooks). */
+/**
+ * Find the household whose profile lists this phone number (used for inbound SMS webhooks).
+ * Compares digits only, since providers send numbers with or without a leading "+".
+ */
 export async function findUserByPhone(phone: string): Promise<string | undefined> {
-  const wanted = phone.replace(/[^\d+]/g, "");
+  const digits = (value: string) => value.replace(/\D/g, "");
+  const wanted = digits(phone);
   let entries: string[] = [];
   try {
     entries = await fs.readdir(usersDir());
@@ -183,7 +187,7 @@ export async function findUserByPhone(phone: string): Promise<string | undefined
   for (const userId of entries) {
     try {
       const household = await loadHousehold(new KnowledgeBase(userId));
-      if (household.phone === wanted) return userId;
+      if (digits(household.phone) === wanted) return userId;
     } catch {
       // not a household folder
     }
