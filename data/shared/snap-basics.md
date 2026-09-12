@@ -6,10 +6,7 @@ intentionally omitted: the copilot never quotes dollar figures.
 
 ## Phone numbers and places
 
-- NYC SNAP line (HRA): 718-762-7669, also written 718-SNAP-NOW. Questions, on-demand interviews, rescheduling.
-- HRA Infoline: 718-557-1399. General help and the number printed on most HRA notices.
-- OTDA statewide SNAP hotline: 1-800-342-3009.
-- Fair hearing requests (OTDA): 1-800-342-3334.
+- SNAP office line: {{SNAP_OFFICE_NUMBER}}. This is the only phone number to give a household. Use it for questions, rescheduling a missed interview, on-demand interviews, and fair hearing requests. Never quote any other phone number, even one you remember.
 - ACCESS HRA: the website and mobile app where a household submits a recertification, uploads photos of documents, and sees case status. Submissions are made by the household, never by the copilot.
 
 ## Recertification
@@ -29,7 +26,7 @@ intentionally omitted: the copilot never quotes dollar figures.
 
 - Standard application processing: 30 days. Expedited processing: 7 days.
 - Expedited criteria: liquid resources of $100 or less and gross monthly income under $150; or shelter costs greater than combined income and resources; or a migrant or seasonal farmworker household meeting the shelter test.
-- Fair hearing: a household has 90 days from the date of an action to request one. Requesting the hearing before the action's effective date keeps benefits at the current level while the hearing is pending. This is called aid continuing.
+- Fair hearing: a household has 90 days from the date of an action to request one by calling the SNAP office line. Requesting the hearing before the action's effective date keeps benefits at the current level while the hearing is pending. This is called aid continuing.
 - Reporting rule: a household must report within 10 days after the end of any month in which gross income goes over the limit printed on their notice.
 
 ## Work rules

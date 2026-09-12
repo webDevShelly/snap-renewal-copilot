@@ -43,6 +43,26 @@ async function walkMarkdown(root: string, prefix = ""): Promise<string[]> {
   return names;
 }
 
+function displayPhone(e164: string): string {
+  const digits = e164.replace(/\D/g, "");
+  return digits.length === 11 && digits.startsWith("1")
+    ? `${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`
+    : e164;
+}
+
+/**
+ * The one phone number the agent may tell households to call. Comes from SNAP_OFFICE_NUMBER so
+ * a demo can route "call SNAP" to a teammate's phone and no real agency line lives in the repo.
+ */
+export function snapOfficeNumber(): string {
+  const raw = process.env.SNAP_OFFICE_NUMBER?.trim();
+  return raw ? displayPhone(raw) : "the phone number printed on your notice";
+}
+
+function substitutePlaceholders(content: string): string {
+  return content.replace(/\{\{SNAP_OFFICE_NUMBER\}\}/g, snapOfficeNumber());
+}
+
 function titleOf(content: string, fallback: string): string {
   const heading = content.split("\n").find((line) => line.startsWith("# "));
   return heading ? heading.slice(2).trim() : fallback;
@@ -88,7 +108,7 @@ export class KnowledgeBase {
     const located = this.locate(name);
     try {
       const content = await fs.readFile(located.file, "utf8");
-      return { name: located.name, scope: located.scope, content };
+      return { name: located.name, scope: located.scope, content: substitutePlaceholders(content) };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         throw new Error(`No document named "${located.name}". Call list_documents to see what exists.`);

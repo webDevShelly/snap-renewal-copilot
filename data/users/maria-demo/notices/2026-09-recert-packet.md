@@ -9,8 +9,8 @@ Transcribed from the paper packet HRA mailed. This is Maria's copy, not the offi
 > will call you at the phone number on file. You must submit your recertification form
 > before your interview.
 >
-> If you cannot keep this appointment or you miss the call, call 718-557-1399 to
-> reschedule. You may also complete an on-demand interview by calling the SNAP line.
+> If you cannot keep this appointment or you miss the call, call {{SNAP_OFFICE_NUMBER}} to
+> reschedule. You may also complete an on-demand interview by calling the same number.
 >
 > Return your completed recertification form and proof of income by 10/31/2026. You may
 > submit online at ACCESS HRA, through the ACCESS HRA mobile app, by mail, or at a SNAP

@@ -87,6 +87,13 @@ route every household's texts to your own number during a demo. A Vonage trial a
 delivers to numbers registered as test numbers in its dashboard. Add Vonage signature
 verification before exposing the webhook publicly.
 
+## The SNAP office number
+
+The knowledge base never contains a real agency phone number. Every "call SNAP" instruction
+reads `{{SNAP_OFFICE_NUMBER}}`, which is filled from the `SNAP_OFFICE_NUMBER` env var when a
+document is read. Set it to a teammate's phone for a demo, and the same variable drives the
+`sms/` service's call bridge. Unset, the agent says "the phone number printed on your notice".
+
 ## Safety boundary
 
 The copilot never submits, signs, or promises to submit a recertification; never states

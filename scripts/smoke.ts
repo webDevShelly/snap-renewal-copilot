@@ -68,6 +68,14 @@ async function main(): Promise<void> {
     assert.equal(notes.match(/^# Notes/gm)?.length, 1);
     assert.match(notes, /First note\n.*Second note/);
   });
+  await check("SNAP_OFFICE_NUMBER fills the placeholder and no real agency number is in the reference", async () => {
+    process.env.SNAP_OFFICE_NUMBER = "+13125550123";
+    const basics = (await kb.read("shared/snap-basics.md")).content;
+    assert.match(basics, /312-555-0123/);
+    assert.doesNotMatch(basics, /\{\{|718-|1-800-/);
+    delete process.env.SNAP_OFFICE_NUMBER;
+    assert.match((await kb.read("shared/snap-basics.md")).content, /the phone number printed on your notice/);
+  });
   await check("refuses shared writes and path escapes", async () => {
     await assert.rejects(kb.write("shared/snap-basics.md", "x"), /read-only/);
     await assert.rejects(kb.read("../../etc/passwd"), /Invalid document name/);
